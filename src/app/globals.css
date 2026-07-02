@@ -1,26 +1,246 @@
 @import "tailwindcss";
 
+/* Class-based dark mode (driven by next-themes attribute="class") */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================
+   DESIGN TOKENS — Soft Structuralism · light & airy · sage
+   ============================================================ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #eff2f8;
+  --bg-soft: #e5eaf4;
+  --surface: #ffffff;
+  --surface-2: #f8fafd;
+
+  --fg: #131722;
+  --fg-muted: #545c6e;
+  --fg-faint: #848da0;
+
+  --border: rgba(18, 24, 44, 0.08);
+  --border-strong: rgba(18, 24, 44, 0.13);
+
+  --accent: #2b55e0;
+  --accent-solid: #2a4ed8;
+  --accent-fg: #ffffff;
+  --accent-soft: #e4ebfd;
+  --ring: #4a6ee8;
+
+  --shadow-soft: 0 1px 2px rgba(18, 28, 60, 0.05), 0 10px 26px -14px rgba(18, 28, 60, 0.14);
+  --shadow-lift: 0 2px 6px rgba(18, 28, 60, 0.06), 0 26px 52px -22px rgba(18, 28, 60, 0.2);
+  --shadow-float: 0 34px 70px -26px rgba(18, 28, 60, 0.26);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+  --glass-bg-1: rgba(255, 255, 255, 0.82);
+  --glass-bg-2: rgba(255, 255, 255, 0.64);
+  --glass-border: rgba(18, 24, 44, 0.08);
+  --glass-hi: rgba(255, 255, 255, 0.9);
 }
 
+.dark {
+  --bg: #16233f;
+  --bg-soft: #1b2a49;
+  --surface: #223257;
+  --surface-2: #293c68;
+
+  --fg: #eef2fb;
+  --fg-muted: #a9b8d8;
+  --fg-faint: #7789ad;
+
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+
+  --accent: #6f9eff;
+  --accent-solid: #2f6bf2;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(111, 158, 255, 0.18);
+  --ring: #6f9eff;
+
+  --shadow-soft: 0 1px 2px rgba(4, 10, 26, 0.45), 0 12px 30px -16px rgba(4, 10, 26, 0.6);
+  --shadow-lift: 0 2px 8px rgba(4, 10, 26, 0.5), 0 30px 60px -24px rgba(4, 10, 26, 0.68);
+  --shadow-float: 0 40px 80px -30px rgba(4, 10, 26, 0.72);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  --glass-bg-1: rgba(58, 82, 134, 0.74);
+  --glass-bg-2: rgba(34, 50, 90, 0.66);
+  --glass-border: rgba(255, 255, 255, 0.16);
+  --glass-hi: rgba(255, 255, 255, 0.12);
+}
+
+/* ============================================================
+   TAILWIND THEME MAPPING (v4)
+   ============================================================ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-bg-soft: var(--bg-soft);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-faint: var(--fg-faint);
+
+  --color-border-hair: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-accent: var(--accent);
+  --color-accent-solid: var(--accent-solid);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+
+  --font-display: var(--font-space), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jbmono), ui-monospace, monospace;
+
+  --shadow-soft: var(--shadow-soft);
+  --shadow-lift: var(--shadow-lift);
+  --shadow-float: var(--shadow-float);
+
+  --animate-float: float 7s cubic-bezier(0.32, 0.72, 0, 1) infinite;
+  --animate-float-slow: float 11s cubic-bezier(0.32, 0.72, 0, 1) infinite;
+  --animate-marquee: marquee 42s linear infinite;
+  --animate-shimmer: shimmer 2.2s linear infinite;
+  --animate-aurora: aurora 22s ease-in-out infinite;
+  --animate-scroll-line: scroll-line 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+@keyframes aurora {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33% { transform: translate3d(4%, -3%, 0) scale(1.08); }
+  66% { transform: translate3d(-3%, 4%, 0) scale(0.96); }
+}
+@keyframes scroll-line {
+  0% { transform: translateY(-100%); }
+  65%, 100% { transform: translateY(100%); }
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    background-color: var(--bg);
+  }
+  body {
+    background-color: transparent;
+    color: var(--fg);
+    font-family: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-fg);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-space), ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Utility: fine grain noise + accent gradient text stroke */
+.text-balance { text-wrap: balance; }
+
+.grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Glass panel. No backdrop-filter (too costly at scale) — a translucent
+   gradient fill + hairline border + top light reads as frosted glass over the
+   static aurora, at effectively zero runtime cost. */
+.glass {
+  background-image: linear-gradient(155deg, var(--glass-bg-1), var(--glass-bg-2));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-lift), inset 0 1px 0 var(--glass-hi);
+}
+
+/* Hover lift for glass cards — transform + shadow only (compositor-cheap),
+   and keeps the glass inner highlight that a plain shadow utility would drop. */
+.lift {
+  transition:
+    transform 0.5s cubic-bezier(0.32, 0.72, 0, 1),
+    box-shadow 0.5s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.lift:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-float), inset 0 1px 0 var(--glass-hi);
+}
+
+/* Static ambient glow — a single painted layer, no filters, no animation.
+   Layer order (top → bottom): centre light that draws the eye to the middle
+   of the viewport, a soft vignette so edges recede, a chrome sheen from the
+   top-left (the reference light source), then the colour blobs. */
+.aurora {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(60rem 42rem at 50% 42%, rgba(255, 255, 255, 0.5), transparent 62%),
+    radial-gradient(130% 105% at 50% 45%, transparent 62%, rgba(24, 39, 84, 0.09) 100%),
+    radial-gradient(48rem 34rem at 10% 0%, rgba(255, 255, 255, 0.55), transparent 60%),
+    radial-gradient(38rem 38rem at 8% 6%, rgba(43, 85, 224, 0.1), transparent 60%),
+    radial-gradient(34rem 34rem at 92% 12%, rgba(59, 108, 246, 0.12), transparent 60%),
+    radial-gradient(30rem 30rem at 78% 38%, rgba(34, 211, 238, 0.08), transparent 60%),
+    radial-gradient(34rem 34rem at 20% 55%, rgba(99, 102, 241, 0.09), transparent 62%),
+    radial-gradient(30rem 30rem at 88% 72%, rgba(43, 85, 224, 0.1), transparent 60%),
+    radial-gradient(28rem 28rem at 10% 95%, rgba(56, 189, 248, 0.08), transparent 60%);
+}
+.dark .aurora {
+  background-image:
+    radial-gradient(62rem 44rem at 50% 42%, rgba(101, 140, 255, 0.15), transparent 62%),
+    radial-gradient(135% 110% at 50% 45%, transparent 60%, rgba(5, 11, 28, 0.42) 100%),
+    radial-gradient(50rem 36rem at 10% 0%, rgba(190, 212, 255, 0.1), transparent 60%),
+    radial-gradient(40rem 40rem at 8% 4%, rgba(47, 107, 242, 0.34), transparent 58%),
+    radial-gradient(34rem 34rem at 94% 12%, rgba(79, 127, 224, 0.26), transparent 58%),
+    radial-gradient(36rem 36rem at 22% 50%, rgba(56, 189, 248, 0.18), transparent 60%),
+    radial-gradient(32rem 32rem at 90% 66%, rgba(99, 102, 241, 0.24), transparent 60%),
+    radial-gradient(26rem 26rem at 72% 88%, rgba(34, 211, 238, 0.12), transparent 60%),
+    radial-gradient(30rem 30rem at 12% 96%, rgba(47, 107, 242, 0.22), transparent 60%),
+    radial-gradient(120% 120% at 100% 0%, rgba(74, 104, 170, 0.2), transparent 55%);
+}
+
+.mask-fade-x {
+  -webkit-mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
