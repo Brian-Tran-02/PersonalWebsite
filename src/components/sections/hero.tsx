@@ -1,143 +1,136 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useRef } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { Reveal } from "@/components/reveal";
 import { PillButton } from "@/components/pill-button";
+import { TileImage } from "@/components/tile-image";
+import { HeroCards } from "@/components/hero-cards";
 import { site } from "@/lib/site";
-import {
-  GithubLogo,
-  LinkedinLogo,
-  EnvelopeSimple,
-  MapPin,
-} from "@phosphor-icons/react/dist/ssr";
+import { Code, Lightning, Users } from "@phosphor-icons/react/dist/ssr";
 
-const stats = [
-  { value: "4+", label: "sites shipped" },
-  { value: "−35%", label: "faster loads" },
-  { value: "100%", label: "client satisfaction" },
-  { value: "98/100", label: "project score" },
+const features = [
+  { icon: Code, label: "Clean Code", detail: "Maintainable & Scalable" },
+  { icon: Lightning, label: "Performance", detail: "Fast & Optimized" },
+  { icon: Users, label: "User Focused", detail: "Intuitive & Accessible" },
 ];
 
+// How much of Hero's own scroll-past-distance the fade+disperse takes —
+// "scroll down slightly" per the brief, not the full section height.
+const FADE_RANGE: [number, number] = [0, 0.32];
+
 /**
- * Text-only content block — the right-column avatar now lives outside this
- * component, shared with About via the merged HeroAbout stage. `mediaSlot`
- * is the mobile-only fallback image, hidden at `lg:` where the stage's own
- * sticky avatar takes over.
+ * Two-column hero matching the reference image: badge/title/description/
+ * CTAs/feature-row on the left, the robot + floating cards on the right.
+ * As you scroll past it, everything fades together (one shared opacity
+ * transform) while the robot specifically disperses into tile-particles
+ * (see tile-image.tsx) rather than just fading flat — About's photo then
+ * assembles the same way in reverse as it scrolls into view.
  */
-export function Hero({ mediaSlot }: { mediaSlot?: ReactNode }) {
+export function Hero() {
+  const heroRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const opacity = useTransform(scrollYProgress, FADE_RANGE, [1, 0]);
+
   return (
-    <div
+    <section
+      ref={heroRef}
       id="top"
-      className="flex min-h-dvh flex-col items-start justify-center gap-7 lg:col-span-7 lg:row-start-1"
+      className="relative isolate min-h-dvh overflow-hidden px-4 pb-16 pt-32 sm:pt-36 md:pb-24"
     >
-      <Reveal>
-        <span className="inline-flex items-center gap-2.5 rounded-full border border-border-strong bg-surface/60 px-3.5 py-1.5 font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-fg-muted backdrop-blur-sm">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent/60" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
-          </span>
-          {site.available}
-        </span>
-      </Reveal>
+      <motion.div
+        style={{ opacity }}
+        className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-12"
+      >
+        {/* Left */}
+        <div className="flex flex-col items-start gap-6 lg:col-span-6">
+          <Reveal>
+            <span className="inline-flex items-center gap-2.5 rounded-full border border-accent-green/30 bg-accent-green-soft px-3.5 py-1.5 font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-accent-green">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-green/60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-accent-green" />
+              </span>
+              {site.available}
+            </span>
+          </Reveal>
 
-      {mediaSlot && (
-        <Reveal delay={0.08} className="w-full lg:hidden">
-          {mediaSlot}
-        </Reveal>
-      )}
+          <Reveal delay={0.05}>
+            <h1 className="text-glow text-[clamp(2.5rem,5.2vw,4rem)] font-semibold leading-[1.05] tracking-tight text-fg">
+              Full-Stack Software Developer
+            </h1>
+          </Reveal>
 
-      <Reveal delay={0.05}>
-        <p className="font-mono text-sm text-fg-muted">
-          {site.name} — {site.role}
-        </p>
-        <h1 className="mt-3 text-[clamp(2.25rem,4.2vw,2.75rem)] font-semibold leading-[1.05] tracking-tight text-fg">
-          I build production
-          <br />
-          <span className="text-accent">systems, front to back.</span>
-        </h1>
-      </Reveal>
+          <Reveal delay={0.1}>
+            <p className="max-w-[46ch] text-lg leading-relaxed text-fg-muted">
+              {site.summary}
+            </p>
+          </Reveal>
 
-      <Reveal delay={0.12}>
-        <p className="max-w-[46ch] text-lg leading-relaxed text-fg-muted">
-          {site.summary}
-        </p>
-      </Reveal>
-
-      <Reveal delay={0.16}>
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
-          {stats.map((s) => (
-            <div key={s.label}>
-              <p className="font-display text-2xl font-semibold tracking-tight text-fg">
-                {s.value}
-              </p>
-              <p className="mt-0.5 text-xs text-fg-muted">{s.label}</p>
+          <Reveal delay={0.16}>
+            <div className="flex flex-wrap items-center gap-3">
+              <PillButton href="#work" icon="arrow-right">
+                See my work
+              </PillButton>
+              <PillButton
+                href={site.resume}
+                variant="ghost"
+                icon="download"
+                download
+              >
+                Résumé
+              </PillButton>
             </div>
-          ))}
-        </div>
-      </Reveal>
+          </Reveal>
 
-      <Reveal delay={0.2}>
-        <p className="text-sm text-fg-muted">
-          <span className="text-fg-faint">Currently — </span>
-          <span className="font-medium text-fg">
-            Co-founder & Full-Stack Dev · Weblume
-          </span>
-        </p>
-      </Reveal>
-
-      <Reveal delay={0.24}>
-        <div className="flex flex-wrap items-center gap-3">
-          <PillButton href="#work" icon="arrow-right">
-            See my work
-          </PillButton>
-          <PillButton
-            href={site.resume}
-            variant="ghost"
-            icon="download"
-            download
-          >
-            Résumé
-          </PillButton>
+          <Reveal delay={0.22}>
+            <div className="mt-4 flex flex-wrap items-center gap-x-7 gap-y-4 rounded-2xl border border-border-strong bg-surface/50 px-5 py-4">
+              {features.map((f) => (
+                <div key={f.label} className="flex items-center gap-2.5">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+                    <f.icon size={17} weight="bold" />
+                  </span>
+                  <div className="leading-tight">
+                    <p className="text-sm font-semibold text-fg">{f.label}</p>
+                    <p className="text-xs text-fg-faint">{f.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Reveal>
         </div>
-      </Reveal>
 
-      <Reveal delay={0.3}>
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 pt-2 text-sm text-fg-muted">
-          <a
-            href={site.socials.github}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group inline-flex items-center gap-2 transition-colors hover:text-fg"
-          >
-            <GithubLogo size={18} weight="fill" className="text-fg-faint transition-colors group-hover:text-accent" />
-            GitHub
-          </a>
-          <a
-            href={site.socials.linkedin}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group inline-flex items-center gap-2 transition-colors hover:text-fg"
-          >
-            <LinkedinLogo size={18} weight="fill" className="text-fg-faint transition-colors group-hover:text-accent" />
-            LinkedIn
-          </a>
-          <a
-            href={site.socials.email}
-            className="group inline-flex items-center gap-2 transition-colors hover:text-fg"
-          >
-            <EnvelopeSimple size={18} weight="fill" className="text-fg-faint transition-colors group-hover:text-accent" />
-            Email
-          </a>
-          <span className="inline-flex items-center gap-2">
-            <MapPin size={18} weight="fill" className="text-fg-faint" />
-            {site.location}
-          </span>
+        {/* Right — robot + floating cards */}
+        <div className="relative lg:col-span-6">
+          <Reveal delay={0.15}>
+            {/* The robot art is portrait (1122x1402 — it includes a
+                holographic base beneath the bust), not square, so its box
+                keeps that aspect ratio rather than forcing a square that
+                would stretch it. */}
+            <div className="relative mx-auto" style={{ width: 640, height: 560 }}>
+              <HeroCards />
+              <TileImage
+                src="/brian-robot.png"
+                width={430}
+                height={537}
+                variant="disperse"
+                range={FADE_RANGE}
+                progress={scrollYProgress}
+                className="mx-auto drop-shadow-[0_30px_60px_rgba(10,16,40,0.6)]"
+              />
+            </div>
+          </Reveal>
         </div>
-      </Reveal>
+      </motion.div>
 
       {/* Scroll cue */}
-      <a
+      <motion.a
         href="#about"
         aria-label="Scroll to the About section"
-        className="group mt-4 hidden w-max flex-col items-center gap-3 md:flex"
+        style={{ opacity }}
+        className="group mx-auto mt-10 hidden w-max flex-col items-center gap-3 md:flex"
       >
         <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-fg-faint transition-colors duration-300 group-hover:text-fg-muted">
           Scroll
@@ -145,7 +138,7 @@ export function Hero({ mediaSlot }: { mediaSlot?: ReactNode }) {
         <span className="h-10 w-px overflow-hidden rounded-full bg-border-strong">
           <span className="block h-full w-full animate-scroll-line bg-accent" />
         </span>
-      </a>
-    </div>
+      </motion.a>
+    </section>
   );
 }

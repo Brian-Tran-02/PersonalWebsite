@@ -6,7 +6,7 @@ export function Footer() {
 
   return (
     <footer className="relative overflow-hidden border-t border-border-hair px-4 pb-10 pt-16">
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-7xl">
         <div className="flex flex-col justify-between gap-10 md:flex-row">
           <div className="max-w-sm">
             <a

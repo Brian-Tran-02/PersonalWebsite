@@ -5,7 +5,7 @@ import { experience } from "@/lib/site";
 export function Experience() {
   return (
     <section id="experience" className="scroll-mt-24 flex min-h-dvh flex-col justify-center px-4 py-24 md:py-32">
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-7xl">
         <SectionHeading title="Where I've done the work." />
 
         <div className="mt-12">

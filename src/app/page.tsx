@@ -1,6 +1,7 @@
 import { Navbar } from "@/components/navbar";
 import { SectionFocus } from "@/components/section-focus";
-import { HeroAbout } from "@/components/sections/hero-about";
+import { Hero } from "@/components/sections/hero";
+import { About } from "@/components/sections/about";
 import { TechMarquee } from "@/components/sections/tech-marquee";
 import { Projects } from "@/components/sections/projects";
 import { Experience } from "@/components/sections/experience";
@@ -13,7 +14,10 @@ export default function Home() {
     <>
       <Navbar />
       <main id="main">
-        <HeroAbout />
+        <Hero />
+        <SectionFocus>
+          <About />
+        </SectionFocus>
         <TechMarquee />
         <SectionFocus>
           <Projects />

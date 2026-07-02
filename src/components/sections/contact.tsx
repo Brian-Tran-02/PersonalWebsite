@@ -7,7 +7,7 @@ import { GithubLogo, LinkedinLogo } from "@phosphor-icons/react/dist/ssr";
 export function Contact() {
   return (
     <section id="contact" className="scroll-mt-24 flex min-h-dvh flex-col justify-center px-4 py-24 md:py-32">
-      <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-12 lg:gap-16">
+      <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-12 lg:gap-16">
         {/* Invitation */}
         <div className="lg:col-span-5">
           <Reveal>

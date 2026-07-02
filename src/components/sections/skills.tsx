@@ -5,7 +5,7 @@ import { stack } from "@/lib/site";
 export function Skills() {
   return (
     <section id="stack" className="scroll-mt-24 flex min-h-dvh flex-col justify-center px-4 py-24 md:py-32">
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-7xl">
         <SectionHeading
           title="Tools I reach for."
           description="Comfortable across the stack — these are what I use most, but I pick up new tools as the problem demands."
