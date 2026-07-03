@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { useScroll } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { Reveal } from "@/components/reveal";
 import { TileImage } from "@/components/tile-image";
 import { site } from "@/lib/site";
@@ -27,12 +27,23 @@ const stats = [
  * here too (this morning's build); they've moved to Hero, so this section
  * now starts directly with the heading.
  */
+// Assembly must finish once About is ~65% scrolled into view while it's
+// still rising up from below Hero — "start end" -> "start start" measures
+// exactly that entrance (0 = section top just touching the viewport's
+// bottom edge, 1 = section top reaching the viewport's top edge), so 0.65
+// here means "about 65% of the way through that reveal."
+const ASSEMBLE_RANGE: [number, number] = [0, 0.65];
+
 export function About() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start end", "start start"],
   });
+  // Narrative slides in from the right on the exact same schedule as the
+  // photo's assembly (ASSEMBLE_RANGE) so both finish moving at once.
+  const narrativeX = useTransform(scrollYProgress, ASSEMBLE_RANGE, [80, 0]);
+  const narrativeOpacity = useTransform(scrollYProgress, ASSEMBLE_RANGE, [0, 1]);
 
   return (
     <section
@@ -52,26 +63,29 @@ export function About() {
                 />
                 <TileImage
                   src="/brian-photo.png"
-                  width={400}
-                  height={371}
+                  width={800}
+                  height={740}
                   variant="assemble"
-                  range={[0, 1]}
+                  range={ASSEMBLE_RANGE}
                   progress={scrollYProgress}
-                  className="mx-auto drop-shadow-[0_30px_60px_rgba(10,16,40,0.5)]"
+                  cols={40}
+                  rows={40}
+                  driftFrom="top"
+                  className="translate-y-[-250px] -translate-x-[200px] mx-auto drop-shadow-[0_30px_60px_rgba(10,16,40,0.5)]"
                 />
               </div>
             </Reveal>
           </div>
 
-          {/* Narrative */}
+          {/* Narrative — slides in from the right in lockstep with the
+              photo's assembly (same ASSEMBLE_RANGE), not the one-time
+              IntersectionObserver-triggered Reveal used elsewhere. */}
           <div className="lg:col-span-7">
-            <Reveal>
+            <motion.div style={{ x: narrativeX, opacity: narrativeOpacity }}>
               <h2 className="text-4xl font-semibold leading-[1.05] tracking-tight text-fg sm:text-5xl">
                 An engineer who ships, not just builds.
               </h2>
-            </Reveal>
 
-            <Reveal delay={0.08}>
               <div className="mt-9 space-y-5 text-lg leading-relaxed text-fg-muted">
                 <p>
                   I&rsquo;m a full-stack engineer finishing my Honours BSc in
@@ -96,7 +110,7 @@ export function About() {
                   systems, networking, and software engineering.
                 </p>
               </div>
-            </Reveal>
+            </motion.div>
           </div>
         </div>
 

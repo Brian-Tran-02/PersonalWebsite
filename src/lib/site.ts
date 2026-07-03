@@ -15,7 +15,7 @@ export const site = {
   available: "Open to SWE roles · New grad 2026",
   tagline: "I build production systems, front to back.",
   summary:
-    "Full-stack engineer working across React, Node.js, and Python. I ship production systems end to end — web apps, APIs, and cross-platform tools — with an eye for performance and the details that make software feel finished.",
+    "Full-stack engineer working across React, Node.js, and Python. I ship production systems end to end (web apps, APIs, and cross-platform tools) with an eye for performance and the details that make software feel finished.",
   // Drop your PDF into /public and keep this filename (or update it).
   resume: "/Brian-Tran-Resume.pdf",
   socials: {

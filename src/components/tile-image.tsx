@@ -6,8 +6,8 @@ import {
   type MotionValue,
 } from "framer-motion";
 
-const COLS = 26;
-const ROWS = 26;
+const DEFAULT_COLS = 32;
+const DEFAULT_ROWS = 32;
 
 /** Deterministic pseudo-random in [0, 1) — same value on server and client,
  * so per-tile stagger doesn't cause a hydration mismatch. */
@@ -27,6 +27,7 @@ function Tile({
   variant,
   range,
   progress,
+  driftFrom,
 }: {
   col: number;
   row: number;
@@ -38,43 +39,76 @@ function Tile({
   variant: "disperse" | "assemble";
   range: [number, number];
   progress: MotionValue<number>;
+  driftFrom: "left" | "top";
 }) {
   const seed = col * 13.37 + row * 7.91;
   const [rangeStart, rangeEnd] = range;
   const span = rangeEnd - rangeStart;
   const start = rangeStart + seeded(seed) * span * 0.5;
   const end = Math.min(rangeEnd, start + span * 0.35 + seeded(seed + 1) * span * 0.2);
-  const driftX = (seeded(seed + 2) - 0.5) * 90;
-  const driftY = (seeded(seed + 3) - 0.5) * 80 - 40;
+  // Always biased toward one edge (not omnidirectional scatter) — tiles
+  // travel from/to a consistent direction rather than exploding outward in
+  // place. Hero's robot flies left (toward where About's photo sits);
+  // About's photo defaults can be overridden to assemble from above instead.
+  const driftMain = -(600 + seeded(seed + 2) * 350);
+  const driftCross = (seeded(seed + 3) - 0.5) * 140;
+  const driftX = driftFrom === "left" ? driftMain : driftCross;
+  const driftY = driftFrom === "top" ? driftMain : driftCross;
   const rotate = (seeded(seed + 4) - 0.5) * 60;
 
-  // "disperse": assembled (1, no offset) -> scattered (0, drifted).
-  // "assemble": scattered (0, drifted) -> assembled (1, no offset) — the
-  // exact same keyframes, just read in the opposite order.
+  // Framer Motion's scroll-linked transforms can silently switch to a
+  // native, browser-accelerated animation when the browser supports
+  // ViewTimeline — but that path doesn't reliably HOLD a value once
+  // `progress` passes a tile's own `end` (verified empirically: tiles were
+  // reappearing at random opacities long after they should've stayed at 0).
+  // Rather than depend on "clamp beyond [start, end]" behavior, define the
+  // hold segments explicitly across the MotionValue's whole real domain
+  // ([0, 1], not just this tile's own sub-window) so there's nothing left
+  // to interpolate incorrectly outside [start, end].
+  const keyframeInput: number[] = [];
+  if (start > 0) keyframeInput.push(0);
+  keyframeInput.push(start, end);
+  if (end < 1) keyframeInput.push(1);
+  const withHolds = (before: number, after: number): number[] => {
+    const out: number[] = [];
+    if (start > 0) out.push(before);
+    out.push(before, after);
+    if (end < 1) out.push(after);
+    return out;
+  };
+
+  // "disperse": assembled (1, no offset) -> flown-off and faded to gone.
+  // Fading is tied to the SAME [start, end] window as the fly-off motion, so
+  // tiles vanish while still traveling (not fading away in place) — per the
+  // caller's own range (e.g. ROBOT_DISPERSE_RANGE in hero.tsx), this
+  // completes well before whatever it's supposed to hand off to (About's
+  // photo) finishes assembling.
+  // "assemble": scattered off-screen (invisible) -> assembled (1, no
+  // offset), the mirror, read in the opposite order.
   const opacity = useTransform(
     progress,
-    [start, end],
-    variant === "disperse" ? [1, 0] : [0, 1],
+    keyframeInput,
+    variant === "disperse" ? withHolds(1, 0) : withHolds(0, 1),
   );
   const x = useTransform(
     progress,
-    [start, end],
-    variant === "disperse" ? [0, driftX] : [driftX, 0],
+    keyframeInput,
+    variant === "disperse" ? withHolds(0, driftX) : withHolds(driftX, 0),
   );
   const y = useTransform(
     progress,
-    [start, end],
-    variant === "disperse" ? [0, driftY] : [driftY, 0],
+    keyframeInput,
+    variant === "disperse" ? withHolds(0, driftY) : withHolds(driftY, 0),
   );
   const scale = useTransform(
     progress,
-    [start, end],
-    variant === "disperse" ? [1, 0.35] : [0.35, 1],
+    keyframeInput,
+    variant === "disperse" ? withHolds(1, 0.35) : withHolds(0.35, 1),
   );
   const rotateZ = useTransform(
     progress,
-    [start, end],
-    variant === "disperse" ? [0, rotate] : [rotate, 0],
+    keyframeInput,
+    variant === "disperse" ? withHolds(0, rotate) : withHolds(rotate, 0),
   );
 
   // A 1px overlap on every edge hides hairline seams between tiles at full
@@ -102,6 +136,7 @@ function Tile({
       }}
     >
       <motion.div
+        suppressHydrationWarning
         style={{
           width: "100%",
           height: "100%",
@@ -121,11 +156,16 @@ function Tile({
 
 /**
  * Shared tile-particle effect, used two ways:
- * - `variant="disperse"`: starts fully assembled, scatters/fades apart as
- *   `progress` increases (Hero's robot, as Hero scrolls out of view).
- * - `variant="assemble"`: the mirror — starts scattered/invisible, converges
- *   into the whole image as `progress` increases (About's photo, as About
- *   scrolls into view).
+ * - `variant="disperse"`: starts fully assembled, flies apart toward one
+ *   edge and fades to gone as `progress` increases (Hero's robot, as Hero
+ *   scrolls out of view) — as if it's headed toward where About's photo
+ *   will assemble, using its own earlier-finishing range so it's gone well
+ *   before that assembly completes, not lingering on screen.
+ * - `variant="assemble"`: the mirror — starts scattered off-screen
+ *   (invisible), converges into the whole image as `progress` increases
+ *   (About's photo, as About scrolls into view) — reading as a continuation
+ *   of Hero's tiles arriving, though the two are actually independent
+ *   scroll-triggered effects, not one literal shared object.
  *
  * `progress` is a MotionValue the caller computes (via `useScroll`) with
  * whatever offset config matches its own trigger — this component doesn't
@@ -139,10 +179,9 @@ function Tile({
  * holographic base beneath a narrower bust, for instance), and forcing a
  * non-square source into a square box would visibly stretch it.
  *
- * Finer-grained than the first version built today (10x10) — 26x26 reads as
- * dust/particles rather than visible chunky tiles, per explicit request.
- * Still transform/opacity only, no filters, so it stays compositor-cheap
- * despite the higher element count.
+ * 32x32 (the default) reads as fine dust/particles rather than visible
+ * chunky tiles. Still transform/opacity only, no filters, so it stays
+ * compositor-cheap even at a higher `cols`/`rows` count.
  */
 export function TileImage({
   src,
@@ -152,6 +191,9 @@ export function TileImage({
   range,
   progress,
   className,
+  cols = DEFAULT_COLS,
+  rows = DEFAULT_ROWS,
+  driftFrom = "left",
 }: {
   src: string;
   width: number;
@@ -160,12 +202,18 @@ export function TileImage({
   range: [number, number];
   progress: MotionValue<number>;
   className?: string;
+  /** Tile grid density — defaults to 32x32; bump for a finer/denser effect. */
+  cols?: number;
+  rows?: number;
+  /** Which edge tiles travel from/to — "left" (default, Hero's robot) or
+   * "top" (About's photo assembles from above instead). */
+  driftFrom?: "left" | "top";
 }) {
-  const tileW = width / COLS;
-  const tileH = height / ROWS;
+  const tileW = width / cols;
+  const tileH = height / rows;
   const tiles: { col: number; row: number }[] = [];
-  for (let row = 0; row < ROWS; row++) {
-    for (let col = 0; col < COLS; col++) {
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
       tiles.push({ col, row });
     }
   }
@@ -189,6 +237,7 @@ export function TileImage({
           variant={variant}
           range={range}
           progress={progress}
+          driftFrom={driftFrom}
         />
       ))}
     </div>
