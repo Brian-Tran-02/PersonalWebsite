@@ -20,13 +20,25 @@ const features = [
 // "scroll down slightly" per the brief, not the full section height.
 const FADE_RANGE: [number, number] = [0, 0.32];
 
-// The robot's disperse finishes well before FADE_RANGE ends (and fades to
-// fully invisible, not just stops moving — see tile-image.tsx) so its
-// particles are gone by the time About's photo has assembled, rather than
-// lingering on screen through the rest of Hero's scroll-out. Widened 3x
-// (0.14 -> 0.42) so it takes roughly 3 scroll-wheel ticks to fully clear,
-// not one.
-const ROBOT_DISPERSE_RANGE: [number, number] = [0, 0.42];
+// The robot's disperse (and fade to fully invisible, not just stops moving
+// — see tile-image.tsx) plays out over nearly all of Hero's own scroll-out,
+// so it stays visible for as long as possible instead of clearing out early
+// and leaving a stretch of nothing before the 50vh gap + About's photo picks
+// up. Widened from 0.42 (too quick) to 0.85, then again to 0.95 per explicit
+// "disappear later" feedback — there's only a 5% buffer left before Hero
+// fully scrolls past, which is fine since the tiles' own opacity is held at
+// 0 past their end regardless (see withHolds in tile-image.tsx).
+const ROBOT_DISPERSE_RANGE: [number, number] = [0, 0.95];
+
+// Tile grid density for the robot's disperse — see the perf note on
+// TileImage in tile-image.tsx. Bumped from 24x24 to 30x30 per explicit
+// "increase particle count" feedback, then back down to 26x26 once that
+// bump (combined with About's own increase) caused a reported scroll-lag
+// regression — 26x26 nets out denser than the original 24x24 while costing
+// less per frame than it did, thanks to the motion-value consolidation
+// described in tile-image.tsx.
+const ROBOT_COLS = 26;
+const ROBOT_ROWS = 26;
 
 /**
  * Two-column hero matching the reference image: badge/title/description/
@@ -43,13 +55,22 @@ export function Hero() {
     target: heroRef,
     offset: ["start start", "end start"],
   });
-  const opacity = useTransform(scrollYProgress, FADE_RANGE, [1, 0]);
+  // A plain 2-point range here hit the exact same Framer Motion bug already
+  // fixed for the tile particles (see tile-image.tsx's withHolds comment) —
+  // the native accelerated scroll-timeline path doesn't reliably hold a
+  // value once progress passes the range's own end. Confirmed empirically:
+  // this opacity was climbing back up to ~0.81 by the time About's photo
+  // was assembling, instead of staying at 0 — Hero's text/cards visibly
+  // reappearing mid-transition. The explicit third point at progress 1
+  // gives it something to hold onto instead of extrapolating past
+  // FADE_RANGE.
+  const opacity = useTransform(scrollYProgress, [FADE_RANGE[0], FADE_RANGE[1], 1], [1, 0, 0]);
 
   return (
     <section
       ref={heroRef}
       id="top"
-      className="relative isolate min-h-dvh overflow-hidden px-4 pb-16 pt-32 sm:pt-36 md:pb-24"
+      className="relative isolate min-h-dvh px-4 pb-16 pt-32 sm:pt-36 md:pb-24"
     >
       <Starfield />
       <div className="mx-auto grid max-w-[1600px] items-center gap-14 lg:grid-cols-12">
@@ -123,11 +144,15 @@ export function Hero() {
           </Reveal>
         </motion.div>
 
-        {/* Right — robot + floating cards. The robot is deliberately NOT
-            inside a fading opacity wrapper (unlike the left column and the
-            cards below) — it has its own, earlier-finishing disperse range
-            (ROBOT_DISPERSE_RANGE) that fades its tiles out on its own
-            schedule, well before About's photo finishes assembling. */}
+        {/* Right — robot + floating cards. The robot has its own,
+            earlier-finishing disperse range (ROBOT_DISPERSE_RANGE) that
+            fades its tiles out on its own schedule, well before About's
+            photo finishes assembling. HeroCards gets the shared `opacity`
+            as a prop and applies it per-card itself — wrapping the whole
+            thing in a `<motion.div style={{opacity}}>` here would trap
+            every card's z-index inside that wrapper's own stacking context
+            (Framer's `will-change: opacity` forces one), putting all of
+            them below the robot's z-10 regardless of their own z-index. */}
         <div className="relative lg:col-span-6">
           <Reveal delay={0.15}>
             {/* The robot art is portrait (1122x1402 — it includes a
@@ -135,9 +160,7 @@ export function Hero() {
                 keeps that aspect ratio rather than forcing a square that
                 would stretch it. */}
             <div className="relative mx-auto" style={{ width: 640, height: 560 }}>
-              <motion.div style={{ opacity }}>
-                <HeroCards />
-              </motion.div>
+              <HeroCards opacity={opacity} />
               <TileImage
                 src="/brian-robot.png"
                 width={680}
@@ -145,6 +168,8 @@ export function Hero() {
                 variant="disperse"
                 range={ROBOT_DISPERSE_RANGE}
                 progress={scrollYProgress}
+                cols={ROBOT_COLS}
+                rows={ROBOT_ROWS}
                 className="z-10 mx-auto -translate-x-[46px] -translate-y-[50px] drop-shadow-[0_30px_60px_rgba(10,16,40,0.6)]"
               />
             </div>

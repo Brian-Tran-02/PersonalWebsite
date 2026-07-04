@@ -15,6 +15,11 @@ export default function Home() {
       <Navbar />
       <main id="main">
         <Hero />
+        {/* Extra scroll distance between Hero and About — gives the
+            robot-to-photo tile transition more room to play out, so it
+            doesn't feel rushed. Plain empty space (no content of its own),
+            so it's outside SectionFocus's blur/dim treatment on purpose. */}
+        <div aria-hidden className="h-[50vh]" />
         <SectionFocus>
           <About />
         </SectionFocus>

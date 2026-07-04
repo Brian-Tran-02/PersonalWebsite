@@ -1,4 +1,8 @@
+"use client";
+
 import Image from "next/image";
+import { motion, type MotionValue } from "framer-motion";
+import type { CSSProperties } from "react";
 
 /**
  * The 4 floating cards are real designed assets (dropped in `public/hero-*`)
@@ -10,14 +14,29 @@ import Image from "next/image";
  * blend-mode or blur tricks needed (an earlier version of this asset had a
  * baked-in near-black background and needed both — no longer applicable).
  *
- * Each card is a wrapper div (position + z-index + the static 3D tilt) around
- * an inner Image (the float animation + opacity + hover). Splitting them
- * avoids a real conflict: the float keyframes animate `transform:
- * translateY(...)` on whichever element they're applied to, and a CSS
- * animation always wins over any other transform declared on that SAME
- * element — so a perspective/rotateY tilt set alongside animate-float on one
- * element would just get silently overridden every frame. Putting the tilt
- * on the wrapper and the float on the child lets both compose normally.
+ * Each card is a wrapper motion.div (position + z-index + the static 3D tilt
+ * + the shared scroll-linked `opacity`) around an inner Image (the float
+ * animation + its own opacity/hover). Splitting them avoids a real
+ * conflict: the float keyframes animate `transform: translateY(...)` on
+ * whichever element they're applied to, and a CSS animation always wins
+ * over any other transform declared on that SAME element — so a
+ * perspective/rotateY tilt set alongside animate-float on one element would
+ * just get silently overridden every frame. Putting the tilt on the
+ * wrapper and the float on the child lets both compose normally.
+ *
+ * `opacity` is passed in (the same MotionValue hero.tsx uses to fade the
+ * rest of Hero) and applied directly on each card's own wrapper — NOT via
+ * an outer `<motion.div style={{opacity}}>` wrapping this whole component,
+ * which was the previous (broken) approach. Framer Motion adds
+ * `will-change: opacity` to elements with an animated opacity, and
+ * `will-change` referencing a stacking-context property forces a stacking
+ * context regardless of the opacity's actual value — so that one shared
+ * wrapper was silently trapping every card's z-index inside its own
+ * context, below the robot's z-10 sibling in hero.tsx, no matter what
+ * z-index the cards themselves had. That broke both the "always in front"
+ * cards and the hover-to-front behavior on the other two. Applying opacity
+ * per-card instead means each card is a direct sibling of the robot, so its
+ * own z-index competes with the robot's normally.
  *
  * Cards sit at reduced opacity and behind the robot (z-0, vs. the robot's
  * z-10 in hero.tsx) by default. The wrapper carries `pointer-events-auto`
@@ -39,13 +58,33 @@ const imgClass =
   "block w-full opacity-75 transition-opacity duration-300 ease-out group-hover:opacity-100 object-contain drop-shadow-[0_20px_40px_rgba(10,16,40,0.5)]";
 // Code and experience (the always-foreground cards) are fully opaque and a
 // touch darker/moodier than the other two, per explicit request. The
-// darkening is a plain translucent-black overlay (see `darkOverlay` below),
-// not a CSS `filter` — filters are markedly more expensive to composite,
-// especially stacked on an element that's already animating every frame via
-// `animate-float`, and this was a real, measured perf regression.
-const imgClassFront =
-  "block w-full opacity-100 object-contain drop-shadow-[0_20px_40px_rgba(10,16,40,0.5)]";
-const darkOverlay = "pointer-events-none absolute inset-0 bg-black/10";
+// darkening is a translucent-black overlay, not a CSS `filter` — filters
+// are markedly more expensive to composite, especially stacked on an
+// element that's already animating every frame via `animate-float`, and
+// this was a real, measured perf regression. There's also no `drop-shadow`
+// here (unlike `imgClass`) — combined with the perspective/rotateY tilt,
+// the shadow filter rendered as a flat, boxy silhouette that didn't match
+// the tilted card's shape.
+const imgClassFront = "block w-full opacity-100 object-contain";
+
+// The overlay is masked to the SAME source image's own alpha shape —
+// these card PNGs have transparent padding around the visible card
+// graphic, so a plain full-rectangle overlay darkened that padding too,
+// showing up as a visible box behind the card. Masking it to the image
+// means it only darkens pixels the image itself actually paints.
+function darkOverlayStyle(src: string): CSSProperties {
+  return {
+    maskImage: `url(${src})`,
+    maskSize: "contain",
+    maskPosition: "center",
+    maskRepeat: "no-repeat",
+    WebkitMaskImage: `url(${src})`,
+    WebkitMaskSize: "contain",
+    WebkitMaskPosition: "center",
+    WebkitMaskRepeat: "no-repeat",
+  } as CSSProperties;
+}
+const darkOverlayClass = "pointer-events-none absolute inset-0 bg-black/25";
 
 // rotateY(+deg) recedes the right edge (smaller/farther) and advances the
 // left; rotateY(-deg) is the mirror. (Flipped from an earlier attempt that
@@ -58,22 +97,26 @@ const tiltLeft = { transform: "perspective(1000px) rotateY(-24deg)" };
 // back from an earlier 42deg that read as too extreme.)
 const tiltRightStrong = { transform: "perspective(1000px) rotateY(30deg)" };
 
-export function HeroCards() {
+export function HeroCards({ opacity }: { opacity: MotionValue<number> }) {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0">
       {/* Behind the robot (rendered after this component in the DOM) — a
-          negative z-index keeps it there regardless of stacking order. */}
-      <Image
-        src="/hero-sphere.png"
-        alt=""
-        width={1536}
-        height={1024}
-        className="absolute left-3/7 top-4/7 -z-10 h-[820px] w-[820px] max-w-none -translate-x-1/2 -translate-y-[670px] object-contain opacity-90 sm:h-[1400px] sm:w-[1400px]"
-      />
+          negative z-index keeps it there regardless of stacking order.
+          Safe to keep in its own opacity wrapper (unlike the cards below) —
+          the sphere never needs to compete above the robot. */}
+      <motion.div style={{ opacity }}>
+        <Image
+          src="/hero-sphere.png"
+          alt=""
+          width={1536}
+          height={1024}
+          className="absolute left-3/7 top-4/7 -z-10 h-[820px] w-[820px] max-w-none -translate-x-1/2 -translate-y-[670px] object-contain opacity-90 sm:h-[1400px] sm:w-[1400px]"
+        />
+      </motion.div>
 
-      <div
-        className={`left-[-20%] bottom-[-10%] hidden w-[220px] sm:block lg:w-[440px] ${wrapperClassFront}`}
-        style={tiltLeft}
+      <motion.div
+        className={`left-[-18%] bottom-[-10%] hidden w-[220px] sm:block lg:w-[440px] ${wrapperClassFront}`}
+        style={{ ...tiltLeft, opacity }}
       >
         {/* The overlay has to move with the float animation, so it's nested
             inside the same `animate-float` element as the image, not a
@@ -87,13 +130,16 @@ export function HeroCards() {
             height={1086}
             className={imgClassFront}
           />
-          <div className={darkOverlay} />
+          <div
+            className={darkOverlayClass}
+            style={darkOverlayStyle("/hero-code.png")}
+          />
         </div>
-      </div>
+      </motion.div>
 
-      <div
-        className={`left-[-24%] top-[-10%] w-[190px] sm:w-[230px] lg:w-[450px] ${wrapperClass}`}
-        style={tiltRight}
+      <motion.div
+        className={`left-[-24%] top-[-5%] w-[190px] sm:w-[230px] lg:w-[450px] ${wrapperClass}`}
+        style={{ ...tiltRight, opacity }}
       >
         <Image
           src="/hero-techstack.png"
@@ -102,11 +148,11 @@ export function HeroCards() {
           height={1086}
           className={`animate-float-slow ${imgClass}`}
         />
-      </div>
+      </motion.div>
 
-      <div
-        className={`top-[-10%] right-[-16%] hidden w-[150px] sm:block lg:w-[400px] ${wrapperClassFront}`}
-        style={tiltRightStrong}
+      <motion.div
+        className={`top-[-10%] right-[-18%] hidden w-[150px] sm:block lg:w-[400px] ${wrapperClassFront}`}
+        style={{ ...tiltRightStrong, opacity }}
       >
         <div className="animate-float-slow relative">
           <Image
@@ -116,13 +162,16 @@ export function HeroCards() {
             height={1448}
             className={imgClassFront}
           />
-          <div className={darkOverlay} />
+          <div
+            className={darkOverlayClass}
+            style={darkOverlayStyle("/hero-experience.png")}
+          />
         </div>
-      </div>
+      </motion.div>
 
-      <div
+      <motion.div
         className={`bottom-[-25%] right-[-15%] w-[200px] sm:w-[235px] lg:w-[455px] ${wrapperClass}`}
-        style={tiltLeft}
+        style={{ ...tiltLeft, opacity }}
       >
         <Image
           src="/hero-focus.png"
@@ -131,7 +180,7 @@ export function HeroCards() {
           height={1086}
           className={`animate-float ${imgClass}`}
         />
-      </div>
+      </motion.div>
     </div>
   );
 }

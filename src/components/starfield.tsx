@@ -2,11 +2,19 @@ import type { CSSProperties } from "react";
 
 const STAR_COUNT = 90;
 
-/** Deterministic pseudo-random in [0, 1) — same trick as tile-image.tsx, so
- * star positions are identical on server and client (no hydration mismatch). */
+/** Deterministic pseudo-random in [0, 1) — integer/bitwise arithmetic only
+ * (no Math.sin), so it's bit-identical on server and client. Math.sin isn't
+ * guaranteed to return the exact same value on every JS engine (Node on the
+ * server vs. the browser can differ in the last few bits of precision),
+ * which was a real, observed hydration mismatch — this hash has no such
+ * cross-platform ambiguity since every operation is exact 32-bit integer
+ * math. */
 function seeded(n: number) {
-  const x = Math.sin(n) * 10000;
-  return x - Math.floor(x);
+  let x = Math.floor(n * 1000) | 0;
+  x = Math.imul(x ^ (x >>> 16), 2654435761);
+  x = Math.imul(x ^ (x >>> 13), 2246822519);
+  x = (x ^ (x >>> 16)) >>> 0;
+  return x / 4294967296;
 }
 
 /**

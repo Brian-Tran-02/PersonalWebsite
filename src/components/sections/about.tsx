@@ -27,23 +27,71 @@ const stats = [
  * here too (this morning's build); they've moved to Hero, so this section
  * now starts directly with the heading.
  */
-// Assembly must finish once About is ~65% scrolled into view while it's
-// still rising up from below Hero — "start end" -> "start start" measures
-// exactly that entrance (0 = section top just touching the viewport's
-// bottom edge, 1 = section top reaching the viewport's top edge), so 0.65
-// here means "about 65% of the way through that reveal."
-const ASSEMBLE_RANGE: [number, number] = [0, 0.65];
+// The trigger point (progress 0) is set to "start 158%" rather than "start
+// end" — i.e. About's top counts as "arrived" while it's still more than
+// half a viewport-height below the visible bottom edge, not only once it's
+// actually touching it. That starts the tiles assembling earlier (less dead
+// scroll after the robot disperses and before the photo picks up), without
+// touching the 50vh gap itself, which stays as its own deliberate breathing
+// room. Pushed later still from 150% per explicit "start earlier" feedback —
+// but 158% is close to the ceiling here, not an arbitrary round number:
+// About's top sits ~1465px down the page (Hero's ~1013px height + the 50vh
+// gap), and at a 900px-tall viewport that puts the "start 163%" point at
+// page-load scroll (0px). Past ~163% the earliest-seeded tile's own [start,
+// end] window would already be underway before the user has scrolled at
+// all — a few stray particles rendering at the very top of the page pre-
+// scroll. 158% leaves a small buffer under that ceiling.
+// Progress 1 ("start start") is unchanged — section top reaching the
+// viewport's top edge.
+//
+// ASSEMBLE_RANGE[0]/[1] used to be 0/0.95 (tiles start right at the offset's
+// own progress-0 point, finish just short of progress-1). Per explicit
+// "start 4 scrolls later, end 1 scroll earlier" feedback — reading "1
+// scroll" as one mouse-wheel notch, ~100px, the standard convention —
+// that's a +400px shift to the start and a -100px shift to the finish, in
+// absolute scroll terms.
+//
+// The progress-vs-scrollY relationship this offset produces turned out NOT
+// to be simple linear (confirmed by temporarily exposing scrollYProgress
+// and sampling it directly at known scrollY values — a naive "targetPoint /
+// span" formula was off by a wide margin, especially at low scrollY). These
+// two fractions were calibrated from that direct sampling: at a 900px-tall
+// viewport, scrollY 400 (the desired new start) measured progress ~0.2525,
+// and scrollY ~1292 (desired new finish, 100px before the old ~1392)
+// measured ~0.88. Also confirmed separately that "finish" has to be judged
+// by the tiles' own transform settling to rest, not by opacity reaching 1 —
+// opacity is deliberately front-loaded now (reaches full well before a tile
+// finishes falling, see tile-image.tsx), so it reaches 1 far earlier than
+// the tile is actually in place.
+const ASSEMBLE_RANGE: [number, number] = [0.2525, 0.88];
+
+// The narrative used to animate over this exact same ASSEMBLE_RANGE, in
+// lockstep with the photo. But once that range was widened (0.65 -> 0.95)
+// per "assemble later" feedback, the narrative's own slide got stretched
+// across nearly the whole scroll too — so gradual it barely read as
+// motion at all ("isn't really visible... looks boring"). It now animates
+// over its own much shorter window instead, so it snaps into place quickly
+// and reads as a distinct, dramatic entrance rather than a slow drift.
+const NARRATIVE_RANGE: [number, number] = [0, 0.22];
 
 export function About() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: sectionRef,
-    offset: ["start end", "start start"],
+    offset: ["start 158%", "start start"],
   });
-  // Narrative slides in from the right on the exact same schedule as the
-  // photo's assembly (ASSEMBLE_RANGE) so both finish moving at once.
-  const narrativeX = useTransform(scrollYProgress, ASSEMBLE_RANGE, [80, 0]);
-  const narrativeOpacity = useTransform(scrollYProgress, ASSEMBLE_RANGE, [0, 1]);
+  // Slides in from further right (80 -> 280 -> 360px) and now also scales up
+  // from slightly small (0.85 -> 1) for more visible punch as it arrives,
+  // per explicit "come in more dramatically" feedback — on NARRATIVE_RANGE,
+  // not the photo's own much longer ASSEMBLE_RANGE (see above). Explicit
+  // hold points at progress 1 — same reason as hero.tsx's opacity fix: a
+  // plain 2-point range that stays "past its own end" for most of the
+  // remaining scroll (which this now does, being so much shorter than the
+  // full reveal) risks the same accelerated-scroll-timeline bug where the
+  // value doesn't reliably hold beyond the range.
+  const narrativeX = useTransform(scrollYProgress, [0, NARRATIVE_RANGE[1], 1], [360, 0, 0]);
+  const narrativeOpacity = useTransform(scrollYProgress, [0, NARRATIVE_RANGE[1], 1], [0, 1, 1]);
+  const narrativeScale = useTransform(scrollYProgress, [0, NARRATIVE_RANGE[1], 1], [0.85, 1, 1]);
 
   return (
     <section
@@ -68,21 +116,31 @@ export function About() {
                   variant="assemble"
                   range={ASSEMBLE_RANGE}
                   progress={scrollYProgress}
-                  cols={40}
-                  rows={40}
-                  driftFrom="top"
-                  className="translate-y-[-250px] -translate-x-[200px] mx-auto drop-shadow-[0_30px_60px_rgba(10,16,40,0.5)]"
+                  // 28x28 -> 34x34 per "more particles" feedback, then back
+                  // to 30x30 once that (plus Hero's own bump) caused a
+                  // reported scroll-lag regression — see the perf history
+                  // comment on TileImage in tile-image.tsx.
+                  cols={30}
+                  rows={30}
+                  className="translate-y-[-340px] -translate-x-[200px] mx-auto drop-shadow-[0_30px_60px_rgba(10,16,40,0.5)]"
                 />
               </div>
             </Reveal>
           </div>
 
-          {/* Narrative — slides in from the right in lockstep with the
-              photo's assembly (same ASSEMBLE_RANGE), not the one-time
-              IntersectionObserver-triggered Reveal used elsewhere. */}
+          {/* Narrative — slides + scales in from the right on its own short
+              NARRATIVE_RANGE (much snappier than the photo's own long
+              assemble), not the one-time IntersectionObserver-triggered
+              Reveal used elsewhere. */}
           <div className="lg:col-span-7">
-            <motion.div style={{ x: narrativeX, opacity: narrativeOpacity }}>
-              <h2 className="text-4xl font-semibold leading-[1.05] tracking-tight text-fg sm:text-5xl">
+            <motion.div
+              style={{ x: narrativeX, opacity: narrativeOpacity, scale: narrativeScale }}
+            >
+              {/* ~20% smaller than the previous text-4xl/sm:text-5xl, per
+                  explicit "reduce heading size" feedback — exact rem values
+                  rather than the nearest Tailwind presets so the reduction
+                  lands precisely at 20%, not whatever the closest step is. */}
+              <h2 className="text-[1.8rem] font-semibold leading-[1.05] tracking-tight text-fg sm:text-[2.4rem]">
                 An engineer who ships, not just builds.
               </h2>
 
