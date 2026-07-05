@@ -59,6 +59,10 @@ function Tile({
   variant,
   range,
   progress,
+  travelDirection = "left",
+  travelDistance = 600,
+  dropDirection = "right",
+  dropDistance = 60,
 }: {
   col: number;
   row: number;
@@ -70,6 +74,37 @@ function Tile({
   variant: "disperse" | "assemble";
   range: [number, number];
   progress: MotionValue<number>;
+  /** Which way "disperse" travels after its per-tile explode burst — "left"
+      (the original, Hero's robot heading toward About's photo) or "right"
+      (About 1/2's baby photo, per explicit request, heading toward About
+      2/2's brian-photo which sits to ITS right). Ignored by "assemble". */
+  travelDirection?: "left" | "right";
+  /** Average horizontal travel distance (px) once tiles pick up the shared
+      post-explosion drift — default 600 preserves the original fixed
+      520+jitter(0-160) magnitude exactly (that range's own average is 600),
+      scaling travelX proportionally when overridden so the jitter shape
+      stays the same. Added per explicit "particles should land at a
+      specific % of the screen" request — see the disperseDistance comment
+      on About in about.tsx for how a target landing point converts to this
+      value. Ignored by "assemble". */
+  travelDistance?: number;
+  /** Which way "assemble" tiles are biased to fall from — "right" (the
+      original default, per "come slightly from the right" feedback) or
+      "left" (brian-photo in About 2/2, per explicit follow-up request, so
+      it arrives from up-and-left instead of up-and-right). Ignored by
+      "disperse". */
+  dropDirection?: "left" | "right";
+  /** Base magnitude (px) of that horizontal bias — the tile's actual
+      pre-arrival offset is dropDistance to dropDistance*2 (per-tile
+      jitter). Default 60 reads as "mostly from the top, slightly from the
+      side" (the original design). brian-photo in About 2/2 uses a much
+      larger value per explicit "start from way more to the left, almost
+      the middle of the screen" request — measured empirically: its
+      resting position sits ~377px right of the viewport's own horizontal
+      center at a 1440px-wide viewport, so ~250 (giving an average offset
+      of 250*1.5=375) was calibrated to land the start position almost
+      exactly there. Ignored by "disperse". */
+  dropDistance?: number;
 }) {
   const seed = col * 13.37 + row * 7.91;
   const [rangeStart, rangeEnd] = range;
@@ -102,15 +137,21 @@ function Tile({
   // takes over for the rest of the travel. Only used by "disperse" now.
   const mid = start + (end - start) * 0.35;
 
-  // "disperse" (Hero's robot): a per-tile radial "explosion" (random angle/
-  // distance, giving the initial dispersal a scattered/bursting look) near
-  // the start, then a SHARED down-and-left drift every tile picks up
-  // afterward (the long trip toward where About's photo sits) — unchanged.
+  // "disperse": a per-tile radial "explosion" (random angle/distance, giving
+  // the initial dispersal a scattered/bursting look) near the start, then a
+  // SHARED down-and-left (or down-and-right, see travelDirection) drift
+  // every tile picks up afterward — Hero's robot travels down-left toward
+  // About's photo; About 1/2's own baby-photo disperse travels down-RIGHT
+  // instead, toward About 2/2's brian-photo which sits to its right, per
+  // explicit request.
   const explodeAngle = seeded(seed + 2) * Math.PI * 2;
   const explodeRadius = 70 + seeded(seed + 3) * 110;
   const explodeX = Math.cos(explodeAngle) * explodeRadius;
   const explodeY = Math.sin(explodeAngle) * explodeRadius;
-  const travelX = -(520 + seeded(seed + 4) * 160);
+  const travelX =
+    (travelDirection === "left" ? -1 : 1) *
+    (520 + seeded(seed + 4) * 160) *
+    (travelDistance / 600);
   const travelY = 420 + seeded(seed + 4) * 140;
   const rotate = (seeded(seed + 5) - 0.5) * 60;
 
@@ -119,15 +160,20 @@ function Tile({
   // imploding inward from scattered directions rather than clearly "coming
   // from the top" per explicit feedback. Mostly vertical (large negative Y,
   // i.e. starting well above the tile's own resting spot), with a SLIGHT
-  // consistent rightward bias on top (not a symmetric per-tile jitter) so
-  // tiles arrive travelling down-and-LEFT into place — matching the robot's
-  // own down-left travel direction (see travelX/Y above), per explicit
-  // "better match the movement curve of the particles from the robot"
-  // feedback. Still small relative to dropY (60-120px vs 560-900px) so it
-  // reads as "mostly from the top, slightly from the right", not a strong
-  // diagonal.
+  // consistent horizontal bias on top (not a symmetric per-tile jitter),
+  // direction set by dropDirection. Originally always rightward (matching
+  // the robot's own down-left travel direction, per explicit "better match
+  // the movement curve of the particles from the robot" feedback); now
+  // "left" for brian-photo (About 2/2), per explicit follow-up request, so
+  // it arrives from up-and-LEFT instead. Still small relative to dropY
+  // (60-120px vs 560-900px by default) so it reads as "mostly from the top,
+  // slightly from the side", not a strong diagonal — though a much larger
+  // dropDistance (see its own comment above) turns this into a genuine
+  // diagonal for brian-photo specifically.
   const dropY = -(560 + seeded(seed + 6) * 340);
-  const dropX = 60 + seeded(seed + 7) * 60;
+  const dropX =
+    (dropDirection === "left" ? -1 : 1) *
+    (dropDistance + seeded(seed + 7) * dropDistance);
   const dropRotate = (seeded(seed + 5) - 0.5) * 34;
 
   // Framer Motion's scroll-linked transforms can silently switch to a
@@ -327,6 +373,10 @@ export function TileImage({
   className,
   cols = DEFAULT_COLS,
   rows = DEFAULT_ROWS,
+  travelDirection = "left",
+  travelDistance = 600,
+  dropDirection = "right",
+  dropDistance = 60,
 }: {
   src: string;
   width: number;
@@ -339,6 +389,15 @@ export function TileImage({
    * but expect a real perf cost (see the note above the component). */
   cols?: number;
   rows?: number;
+  /** "disperse"-only: which way tiles travel after exploding, and how far
+      on average. See the travelDirection/travelDistance comments on Tile
+      above. */
+  travelDirection?: "left" | "right";
+  travelDistance?: number;
+  /** "assemble"-only: which side tiles are biased to fall from, and how
+      far. See the dropDirection/dropDistance comments on Tile above. */
+  dropDirection?: "left" | "right";
+  dropDistance?: number;
 }) {
   const tileW = width / cols;
   const tileH = height / rows;
@@ -368,6 +427,10 @@ export function TileImage({
           variant={variant}
           range={range}
           progress={progress}
+          travelDirection={travelDirection}
+          travelDistance={travelDistance}
+          dropDirection={dropDirection}
+          dropDistance={dropDistance}
         />
       ))}
     </div>

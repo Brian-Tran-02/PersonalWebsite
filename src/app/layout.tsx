@@ -71,7 +71,15 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${display.variable} ${sans.variable} ${mono.variable} h-full`}
     >
-      <body className="min-h-full antialiased">
+      {/* suppressHydrationWarning here too (not just <html>) — browser
+          extensions like Grammarly inject their own attributes
+          (data-gr-ext-installed, data-new-gr-c-s-check-loaded) directly
+          onto <body> before React hydrates, which otherwise trips a
+          hydration-mismatch warning that's a false positive: the extension,
+          not our code, changed the DOM. suppressHydrationWarning doesn't
+          propagate to children, so this has to be set here specifically,
+          not inherited from the one already on <html>. */}
+      <body className="min-h-full antialiased" suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
