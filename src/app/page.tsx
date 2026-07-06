@@ -16,7 +16,7 @@ import { SparkleIcon } from "@phosphor-icons/react/dist/ssr";
 // story" look (per explicit "make it look like this [reference image]"
 // request), now shared with About 2/2 too (per explicit "use the fonts and
 // styles from about 1/2" follow-up) so both instances render the identical
-// structure/spacing off just their own label + two heading lines.
+// structure/spacing off just their own label + two heading lines. v
 function titleBlock(label: string, lineWhite: string, lineAccent: string) {
   return (
     <>
