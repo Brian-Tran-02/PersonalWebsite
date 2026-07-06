@@ -244,7 +244,7 @@ export function About({
   // directly, independent of the photo's own timing.
   const { scrollYProgress: visibilityProgress } = useScroll({
     target: sectionRef,
-    offset: ["start end", `start -${narrativeExitExtend}px`],
+    offset: ["start end", `start ${-narrativeExitExtend}px`],
   });
   // Slides in from further right (80 -> 280 -> 360px) and now also scales up
   // from slightly small (0.85 -> 1) for more visible punch as it arrives,
